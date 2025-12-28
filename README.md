@@ -1,4 +1,4 @@
-# 📶 Hilbert Curve from Network Ping
+# Hilbert Curve from Network Ping
 
 This Python program detects the user's network and subnet mask, then pings the derived IP range to determine active devices. The results are visualized using a Hilbert curve, which plots active and inactive IPs in a structured 2D representation. 
 
