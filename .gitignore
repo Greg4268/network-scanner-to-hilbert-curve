@@ -1,5 +1,7 @@
 venv/
-.DS_Store# pixi environments
+.DS_Store
+.env
+# pixi environments
 .pixi/*
 !.pixi/config.toml
 pixi.lock

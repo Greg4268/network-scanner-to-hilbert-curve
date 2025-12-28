@@ -7,19 +7,9 @@ import netifaces
 import numpy as np
 import matplotlib.pyplot as plt
 from hilbertcurve.hilbertcurve import HilbertCurve
+import time 
 
-def get_local_ip():
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))  # Google DNS 
-        local_ip = s.getsockname()[0]
-        s.close()
-        return local_ip
-    except Exception as e:
-        print(f"Error retrieving local IP: {e}")
-        return None
-
-def get_subnet_mask():
+def get_ip_and_mask():
     try:
         interfaces = netifaces.interfaces()
         for iface in interfaces:
@@ -35,17 +25,15 @@ def get_subnet_mask():
     return None, None
 
 def get_network():
-    local_ip, subnet_mask = get_subnet_mask()
-    
+    local_ip, subnet_mask = get_ip_and_mask()
     if local_ip and subnet_mask:
         try:
             network = ipaddress.IPv4Network(f"{local_ip}/{subnet_mask}", strict=False)
             return network
         except ValueError as e:
-            print(f"Invalid network detected: {e}")
+            print(f"Invalid network: {e}")
             return None
     else:
-        print("Failed to determine network.")
         return None
 
 network = get_network()
@@ -61,16 +49,17 @@ num_ips = len(ip_list)
 curve_order = int(np.ceil(np.log2(np.sqrt(num_ips))))  # dynamic adjust 
 hilbert = HilbertCurve(curve_order, 2)
 
-# results
-active_ips = []
-inactive_ips = []
-
 def ping_ip(ip):
     ip_str = str(ip)
     ping_cmd = ['ping', '-c', '1', '-W', '1', ip_str] if os.name != 'nt' else ['ping', '-n', '1', ip_str]
     response = subprocess.run(ping_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return ip_str, response.returncode == 0  # True if ping succeeds
 
+# results
+active_ips = []
+inactive_ips = []
+
+print("Executing pings. This will take about 1-2 minutes")
 # Use threading to speed up scanning
 cpu_count = os.cpu_count()
 with concurrent.futures.ThreadPoolExecutor(cpu_count * 2) as executor:
@@ -86,16 +75,14 @@ for ip, is_active in results:
         print(f"{ip} is in use!")
     else:
         inactive_ips.append((x, y))
-        print(f"{ip} is silent...")
 
 
-plt.figure(figsize=(6, 6), facecolor='black')  
+plt.figure(figsize=(5, 5), facecolor='black')  
 ax = plt.gca()
 ax.set_facecolor('black')  
 plt.scatter(*zip(*inactive_ips), c='gray', label="Inactive", marker='s', s=40, alpha=0.6)  
 plt.scatter(*zip(*active_ips), c='lime', label="Active", marker='s', s=40, alpha=0.8)  
-ax.legend(frameon=False, fontsize=10, loc="lower right",
-                    bbox_to_anchor=(1, 0), facecolor="black", edgecolor="white", labelcolor="white")
+ax.legend(frameon=False, fontsize=10, loc="best", bbox_to_anchor=(1, 0), facecolor="black", edgecolor="white", labelcolor="white")
 plt.title("Hilbert Curve Visualization of Network IPs", color='white')
 plt.grid(color='gray', linestyle='--', linewidth=0.3, alpha=0.4)  
 plt.xticks([])  
